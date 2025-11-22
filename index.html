@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Presentador Maestro - La Oveja Perdida</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; overflow: hidden; touch-action: manipulation; }
+        h1, h2, h3 { font-family: 'Merriweather', serif; }
+        
+        /* Animaciones */
+        .slide-enter { animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Scrollbar personalizado */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+
+        /* Estilos de imagen */
+        .slide-image-container {
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        .slide-image-container::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(17, 24, 39, 0.8), transparent);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white h-screen flex flex-col">
+
+    <!-- 1. BARRA SUPERIOR -->
+    <header class="bg-gray-800 shadow-md border-b border-gray-700 z-50 shrink-0 p-3">
+        <div class="flex justify-between items-center max-w-7xl mx-auto w-full">
+            <div class="flex items-center gap-3">
+                <button onclick="toggleMenu()" class="md:hidden text-gray-300 hover:text-white p-2 rounded focus:bg-gray-700">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+                <h1 class="hidden md:block font-bold text-lg text-gray-200">La Oveja Perdida <span class="text-blue-500 text-sm font-normal">| Mateo 18</span></h1>
+            </div>
+
+            <!-- Temporizador -->
+            <div class="flex items-center gap-3 bg-gray-900 px-4 py-2 rounded-lg border border-gray-700">
+                <div id="timerDisplay" class="text-2xl md:text-3xl font-bold font-mono text-green-400">40:00</div>
+                <div class="flex gap-1">
+                    <button onclick="startTimer()" id="btnStart" class="text-gray-400 hover:text-green-400 p-1"><i class="fas fa-play"></i></button>
+                    <button onclick="pauseTimer()" class="text-gray-400 hover:text-yellow-400 p-1"><i class="fas fa-pause"></i></button>
+                    <button onclick="resetTimer()" class="text-gray-400 hover:text-red-400 p-1"><i class="fas fa-redo"></i></button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. ÁREA PRINCIPAL -->
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- NAVEGACIÓN LATERAL -->
+        <div id="sidebar" class="fixed inset-y-0 left-0 transform -translate-x-full md:relative md:translate-x-0 transition duration-200 ease-in-out z-40 w-72 bg-gray-800 border-r border-gray-700 flex flex-col h-full">
+            <div class="p-4 bg-gray-900 border-b border-gray-700 flex justify-between items-center">
+                <span class="text-gray-400 text-xs font-bold uppercase tracking-wider">20 Diapositivas</span>
+                <button onclick="toggleMenu()" class="md:hidden text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            <ul id="slideList" class="overflow-y-auto flex-1 p-2 space-y-1">
+                <!-- JS llenará esto -->
+            </ul>
+        </div>
+        
+        <!-- Overlay Móvil -->
+        <div id="sidebarOverlay" onclick="toggleMenu()" class="fixed inset-0 bg-black bg-opacity-70 z-30 hidden md:hidden backdrop-blur-sm"></div>
+
+        <!-- CONTENIDO DE LA DIAPOSITIVA -->
+        <main id="mainContent" class="flex-1 overflow-y-auto relative w-full bg-gray-900" ontouchstart="handleTouchStart(event)" ontouchmove="handleTouchMove(event)">
+            <div class="max-w-6xl mx-auto p-4 md:p-8 pb-24 grid md:grid-cols-2 gap-8 items-start min-h-full">
+                
+                <!-- COLUMNA IZQUIERDA: TEXTO Y GUÍA -->
+                <div class="slide-enter flex flex-col justify-center h-full space-y-6">
+                    
+                    <!-- Header -->
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <span class="text-blue-400 text-xs font-bold uppercase tracking-wider mb-1 block" id="slideSection">Sección</span>
+                        <h2 class="text-3xl md:text-4xl font-bold text-white leading-tight mb-2" id="slideTitle">Título</h2>
+                        <div class="text-5xl font-bold text-gray-800 absolute top-4 right-4 md:hidden" id="slideNumberMobile">#1</div>
+                    </div>
+
+                    <!-- Contenido Principal -->
+                    <div id="slideContent" class="text-lg md:text-xl text-gray-300 leading-relaxed space-y-4">
+                        <!-- Dinámico -->
+                    </div>
+
+                    <!-- Nota Bíblica -->
+                    <div id="bibleNote" class="bg-blue-900/20 border border-blue-800 p-4 rounded-lg hidden">
+                        <p class="text-blue-200 italic font-serif" id="bibleText"></p>
+                    </div>
+                </div>
+
+                <!-- COLUMNA DERECHA: VISUAL (IMAGEN) -->
+                <div class="hidden md:block slide-enter sticky top-8">
+                    <div class="slide-image-container aspect-video bg-gray-800">
+                        <img id="slideImage" src="" alt="Visual de la presentación" class="w-full h-full object-cover opacity-90 hover:opacity-100 transition duration-500">
+                        <div class="absolute bottom-0 left-0 p-4 w-full">
+                            <span class="text-6xl font-bold text-white/10 absolute bottom-2 right-4" id="slideNumberDesktop">#1</span>
+                        </div>
+                    </div>
+                    <p class="text-center text-xs text-gray-600 mt-2 italic">Visual de referencia para la audiencia</p>
+                </div>
+
+                <!-- IMAGEN MÓVIL (Aparece debajo del texto en celular) -->
+                <div class="md:hidden mt-4 slide-enter">
+                    <div class="rounded-lg overflow-hidden shadow-lg border border-gray-700">
+                        <img id="slideImageMobile" src="" class="w-full h-48 object-cover">
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- 3. BARRA INFERIOR -->
+    <footer class="bg-gray-800 p-3 border-t border-gray-700 z-50">
+        <div class="max-w-4xl mx-auto flex justify-between items-center gap-4">
+            <button onclick="prevSlide()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-bold flex items-center justify-center transition active:scale-95">
+                <i class="fas fa-arrow-left mr-2"></i> <span class="hidden sm:inline">Anterior</span>
+            </button>
+            
+            <div class="text-gray-400 font-mono text-sm">
+                <span id="mobileCurrent">1</span>/<span id="mobileTotal">20</span>
+            </div>
+
+            <button onclick="nextSlide()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold flex items-center justify-center transition shadow-lg shadow-blue-900/50 active:scale-95">
+                <span class="hidden sm:inline">Siguiente</span> <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </footer>
+
+    <script>
+        // --- TUS 20 PÁGINAS ---
+        const presentationData = [
+            {
+                page: 1,
+                title: "La Oveja Perdida",
+                section: "Portada",
+                content: `<p class="text-xl font-serif italic text-center">Mateo 18:10-14</p><p class="text-center text-gray-400 mt-2">Estudio Bíblico Río de Dios</p>`,
+                img: "Imagen1.png" 
+            },
+            {
+                page: 2,
+                title: "La Pregunta sobre la Grandeza",
+                section: "Contexto",
+                content: `<ul class="list-disc pl-5 space-y-2"><li>Los discípulos preguntan: <em>¿Quién es el mayor?</em></li><li>Inquietud asociada a <strong>rangos, estatus y jerarquías</strong>.</li><li>Enfoque en grandeza personal.</li></ul>`,
+                bible: "Mateo 18:1",
+                img: "Imagen2.png" 
+            },
+            {
+                page: 3,
+                title: "Un Niño como Modelo",
+                section: "Contexto",
+                content: `<p>Jesús pone a un niño en medio.</p><div class="bg-gray-800 p-3 rounded border-l-4 border-yellow-500 mt-2"><p class="text-yellow-200">Contraste:</p><p>Búsqueda de grandeza <strong>VS</strong> Humildad y sencillez.</p></div>`,
+                bible: "Mateo 18:3 - Si no fuerais transformados...",
+                img: "Imagen3.png" 
+            },
+            {
+                page: 4,
+                title: "¿Quiénes son 'estos pequeños'?",
+                section: "Definición",
+                content: `<p class="font-bold text-lg mb-2">No son solo niños físicos.</p><ul class="space-y-2"><li><i class="fas fa-user-plus text-green-400 mr-2"></i>Creyentes nuevos.</li><li><i class="fas fa-seedling text-green-400 mr-2"></i>Inmaduros en la fe.</li><li><i class="fas fa-shield-alt text-green-400 mr-2"></i>Vulnerables a tropezar.</li></ul>`,
+                img: "Imagen4.png" 
+            },
+            {
+                page: 5,
+                title: "Enfocando el Mensaje",
+                section: "Mateo 18:10-14",
+                content: `<p>Con el contexto claro (hablamos de creyentes vulnerables), examinamos la intención original de Jesús.</p>`,
+                img: "Imagen5.png" 
+            },
+            {
+                page: 6,
+                title: "Una Parábola, Dos Propósitos",
+                section: "Comparativa",
+                content: `<div class="grid grid-cols-1 gap-2"><div class="bg-blue-900/40 p-3 rounded border border-blue-500"><strong class="text-blue-300">Mateo 18 (Iglesia):</strong> Cuidar y restaurar al creyente desviado.</div><div class="bg-gray-800 p-3 rounded opacity-60"><strong class="text-gray-400">Lucas 15 (Mundo):</strong> Evangelizar al pecador perdido.</div></div>`,
+                img: "Imagen6.png" 
+            },
+            {
+                page: 7,
+                title: "Mirad que no menospreciéis",
+                section: "Versículo 10",
+                content: `<p><strong>Principio:</strong> El valor de un 'pequeño' es inmenso.</p><p class="mt-2"><strong>Razón:</strong> Contraste poderoso. Los más humildes en la tierra tienen el acceso más glorioso en el cielo.</p>`,
+                bible: "Mateo 18:10",
+                img: "Imagen7.png" 
+            },
+            {
+                page: 8,
+                title: "¿Qué enseña el v.10?",
+                section: "Mito vs Realidad",
+                content: `<ul class="space-y-3"><li><span class="text-red-400 font-bold">MITO:</span> Ángel de la guarda personal (omnipresencia).</li><li><span class="text-green-400 font-bold">REALIDAD:</span> Estatus elevado. Sus representantes están perpetuamente ante el Padre.</li></ul>`,
+                img: "Imagen8.png" 
+            },
+            {
+                page: 9,
+                title: "La Lógica del Pastor",
+                section: "Análisis v.12-13",
+                content: `<p>Entramos al análisis detallado de la parábola.</p>`,
+                img: "Imagen9.png" 
+            },
+            {
+                page: 10,
+                title: "Entendamos a las Ovejas",
+                section: "Contexto Animal",
+                content: `<ul class="list-disc pl-5 space-y-2"><li><strong>Instinto Gregario:</strong> Seguir al grupo.</li><li><strong>Protección:</strong> Mentalidad de rebaño contra depredadores.</li><li><strong>Límites:</strong> Un rebaño maduro conoce su territorio.</li></ul>`,
+                img: "Imagen10.png" 
+            },
+            {
+                page: 11,
+                title: "La Pregunta Afirmativa",
+                section: "Versículo 12",
+                content: `<p>Jesús asume que ir a buscarla es la <strong>única respuesta lógica</strong>.</p><p class="mt-2">Para un verdadero pastor, la búsqueda es una reacción natural e inevitable.</p>`,
+                bible: "¿Qué os parece? Si un hombre tiene cien ovejas...",
+                img: "Imagen11.png" 
+            },
+            {
+                page: 12,
+                title: "¿Y las 99?",
+                section: "Versículo 12",
+                content: `<p>No las abandona al peligro. Las deja <strong>'en las montañas'</strong> (lugar seguro).</p><div class="bg-gray-800 p-2 mt-2 rounded text-sm">Confía en la madurez del rebaño unido. Es una misión de rescate calculada.</div>`,
+                img: "Imagen12.png" 
+            },
+            {
+                page: 13,
+                title: "El Valor de UNA",
+                section: "La Pérdida",
+                content: `<p>El pastor sabe que la oveja perdida:</p><ul class="list-disc pl-5 mt-2"><li>Actuó contra su naturaleza (aislarse).</li><li>Está en pánico y desorientada.</li><li>Su valor no disminuye por estar perdida.</li></ul>`,
+                img: "Imagen13.png" 
+            },
+            {
+                page: 14,
+                title: "Tensión y Gozo",
+                section: "Versículo 13",
+                content: `<p><em>"Y si llega a encontrarla..."</em> (No está garantizado).</p><p class="mt-4 font-bold text-yellow-400">El Gozo:</p><p>Es por la <strong>restauración</strong>. Lo perdido ha vuelto a la seguridad.</p>`,
+                img: "Imagen14.png" 
+            },
+            {
+                page: 15,
+                title: "Nuestra Misión Hoy",
+                section: "Aplicación",
+                content: `<p class="text-2xl text-center font-bold">El Rebaño Somos Nosotros.</p><p class="text-center mt-2">De la parábola a la práctica en la iglesia Río de Dios.</p>`,
+                img: "Imagen15.png" 
+            },
+            {
+                page: 16,
+                title: "La Voluntad del Padre",
+                section: "Versículo 14",
+                content: `<p>No es una observación, es un <strong>mandato divino</strong>.</p><p>El corazón de Dios está inclinado hacia la protección de los vulnerables. Somos sus manos y pies.</p>`,
+                bible: "No es la voluntad... que se pierda uno de estos pequeños.",
+                img: "Imagen16.png" 
+            },
+            {
+                page: 17,
+                title: "¿Cómo se extravían hoy?",
+                section: "Aplicación",
+                content: `<div class="grid grid-cols-2 gap-2 text-sm"><div class="bg-gray-800 p-2">Inmoralidad/Vicios</div><div class="bg-gray-800 p-2">Entretenimiento vacío</div><div class="bg-gray-800 p-2">Poder/Riqueza</div><div class="bg-gray-800 p-2">Desánimo/Soledad</div></div><p class="mt-2 text-sm italic">El mundo ofrece vacío. La iglesia ofrece refugio.</p>`,
+                img: "Imagen17.png" 
+            },
+            {
+                page: 18,
+                title: "Doctrina + Hogar Seguro",
+                section: "Aplicación",
+                content: `<h3 class="text-xl font-bold text-center mb-4">Doctrina + Comunidad</h3><p>No solo velar por intereses individuales, sino buscar y necesitar activamente el bienestar de todos.</p>`,
+                img: "Imagen18.png" 
+            },
+            {
+                page: 19,
+                title: "Responsabilidad de Todos",
+                section: "Aplicación",
+                content: `<p>La búsqueda involucra a:</p><ul class="space-y-2 mt-2"><li>El hermano que saluda.</li><li>El ministro de alabanza.</li><li>El maestro paciente.</li><li><strong>Quien nota una ausencia y llama.</strong></li></ul>`,
+                img: "Imagen19.png" 
+            },
+            {
+                page: 20,
+                title: "Seamos el Rebaño que Cuida",
+                section: "Cierre",
+                content: `<p>Una iglesia donde nadie se sienta invisible.</p><p class="mt-4 text-xl italic text-center text-blue-300">"Exhortaos los unos a los otros, y edificaos el uno al otro."</p>`,
+                bible: "1 Tesalonicenses 5:11",
+                img: "Imagen20.png" 
+            }
+        ];
+
+        // --- LÓGICA ---
+        let currentSlide = 0;
+        let timeLeft = 40 * 60;
+        let timerInterval;
+        let isPaused = true;
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        function init() {
+            renderSlideList();
+            showSlide(0);
+            updateTimerDisplay();
+            document.getElementById('mobileTotal').innerText = presentationData.length;
+        }
+
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        function renderSlideList() {
+            const list = document.getElementById('slideList');
+            list.innerHTML = '';
+            presentationData.forEach((slide, index) => {
+                const li = document.createElement('li');
+                li.className = `p-2 rounded-md cursor-pointer hover:bg-gray-700 transition text-sm flex items-center gap-2 truncate text-gray-400`;
+                li.innerHTML = `<span class="bg-gray-900 px-1.5 rounded text-xs font-mono opacity-70">${index + 1}</span> <span class="truncate">${slide.title}</span>`;
+                li.onclick = () => { showSlide(index); if(window.innerWidth<768) toggleMenu(); };
+                li.id = `nav-item-${index}`;
+                list.appendChild(li);
+            });
+        }
+
+        function showSlide(index) {
+            if (index < 0 || index >= presentationData.length) return;
+            currentSlide = index;
+            const data = presentationData[index];
+
+            // Actualizar Textos
+            document.getElementById('slideTitle').innerText = data.title;
+            document.getElementById('slideSection').innerText = data.section;
+            document.getElementById('slideContent').innerHTML = data.content;
+            document.getElementById('mobileCurrent').innerText = index + 1;
+            
+            document.getElementById('slideNumberDesktop').innerText = `#${data.page}`;
+            document.getElementById('slideNumberMobile').innerText = `#${data.page}`;
+
+            // Actualizar Imágenes
+            const imgUrl = data.img || "https://placehold.co/800x450/1f2937/ffffff?text=Río+de+Dios";
+            document.getElementById('slideImage').src = imgUrl;
+            document.getElementById('slideImageMobile').src = imgUrl;
+
+            // Biblia
+            const bibleBox = document.getElementById('bibleNote');
+            if (data.bible) {
+                bibleBox.classList.remove('hidden');
+                document.getElementById('bibleText').innerText = data.bible;
+            } else {
+                bibleBox.classList.add('hidden');
+            }
+
+            // Highlight Menú
+            document.querySelectorAll('#slideList li').forEach((li, i) => {
+                li.className = i === index 
+                    ? 'p-2 rounded-md cursor-pointer bg-blue-600 text-white font-bold text-sm flex items-center gap-2 shadow-lg' 
+                    : 'p-2 rounded-md cursor-pointer hover:bg-gray-700 transition text-sm flex items-center gap-2 text-gray-400';
+            });
+        }
+
+        function nextSlide() { showSlide(currentSlide + 1); }
+        function prevSlide() { showSlide(currentSlide - 1); }
+
+        // Touch Logic
+        document.getElementById('mainContent').addEventListener('touchstart', e => touchStartX = e.changedTouches[0].screenX);
+        document.getElementById('mainContent').addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            if (touchEndX < touchStartX - 50) nextSlide();
+            if (touchEndX > touchStartX + 50) prevSlide();
+        });
+
+        // Timer
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            const display = document.getElementById('timerDisplay');
+            display.innerText = `${m}:${s}`;
+            
+            if(timeLeft < 300) display.classList.replace('text-yellow-400', 'text-red-500');
+            else if(timeLeft < 1200) display.classList.replace('text-green-400', 'text-yellow-400');
+        }
+
+        function startTimer() {
+            if (!isPaused) return;
+            isPaused = false;
+            document.getElementById('btnStart').classList.add('text-green-400');
+            timerInterval = setInterval(() => {
+                if (timeLeft > 0) { timeLeft--; updateTimerDisplay(); }
+                else { clearInterval(timerInterval); alert("Tiempo!"); }
+            }, 1000);
+        }
+        function pauseTimer() { isPaused = true; clearInterval(timerInterval); document.getElementById('btnStart').classList.remove('text-green-400'); }
+        function resetTimer() { pauseTimer(); timeLeft = 40 * 60; updateTimerDisplay(); display.className = "text-2xl md:text-3xl font-bold font-mono text-green-400"; }
+
+        init();
+        
+        // Teclado
+        document.addEventListener('keydown', (e) => {
+            if(e.key === "ArrowRight" || e.key === "Space") nextSlide();
+            if(e.key === "ArrowLeft") prevSlide();
+        });
+    </script>
+</body>
+</html>
